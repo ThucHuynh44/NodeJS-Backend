@@ -19,6 +19,16 @@ const RoleShop = {
 };
 
 class AccessService {
+
+  /*
+    check this token used?
+  */
+
+  static handlerRefreshToken = async(refreshToken) => {
+    const foundToken = await keyTokenService.
+  }
+
+
   /* 
     // 1 - Check email in dbs
     // 2 - match password
