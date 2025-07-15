@@ -3,9 +3,13 @@
 const shopModel = require("../models/shop.model");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const { createTokenPair } = require("../auth/authUtils");
+const { createTokenPair, verifyJWT } = require("../auth/authUtils");
 const { getInfoData } = require("../utils");
-const { BadRequestError, AuthFailureError } = require("../core/error.response");
+const {
+  BadRequestError,
+  AuthFailureError,
+  ForbiddenError,
+} = require("../core/error.response");
 
 //service
 const keyTokenService = require("./keyToken.service");
@@ -19,15 +23,71 @@ const RoleShop = {
 };
 
 class AccessService {
-
   /*
     check this token used?
   */
 
-  static handlerRefreshToken = async(refreshToken) => {
-    const foundToken = await keyTokenService.
-  }
+  static handlerRefreshToken = async (refreshToken) => {
+    //Check token used or not
+    const foundToken = await keyTokenService.findByRefreshTokenUsed(
+      refreshToken
+    );
+    // if has
+    if (foundToken) {
+      //decode to check who is accessing?
+      const { userId, email } = await verifyJWT(
+        refreshToken,
+        foundToken.privateKey
+      );
+      console.log({ userId, email });
+      // Remove all token in keyStore
+      await keyTokenService.deleteKeyById(userId);
+      throw new ForbiddenError("Something wrong happen!! Pls relogin");
+    }
 
+    //if No
+    const holderToken = await keyTokenService.findByRefreshToken(refreshToken);
+    if (!holderToken) throw new AuthFailureError("Shop not registered");
+
+    // verifyToken
+    const { userId, email } = await verifyJWT(
+      refreshToken,
+      holderToken.privateKey
+    );
+    console.log("[2]--", { userId, email });
+    //Check userId
+    const foundShop = await findByEmail({ email });
+    if (!foundShop) throw new AuthFailureError("Shop not registered");
+
+    // create a pair keyToken
+    const tokens = await createTokenPair(
+      { userId, email },
+      holderToken.publicKey,
+      holderToken.privateKey
+    );
+    // update token
+    /*
+    //CODE này lỗi thời r
+    // await holderToken.update({
+    //   $set: {
+    //     refreshToken: tokens.refreshToken,
+    //   },
+    //   $addToSet: {
+    //     refreshTokenUsed: refreshToken, // Token used to get new token
+    //   },
+    // });
+    */
+
+    await keyTokenService.updateRefreshTokenUsed(holderToken.user, {
+      refreshToken: tokens.refreshToken,
+      refreshTokenUsed: refreshToken,
+    });
+
+    return {
+      user: { userId, email },
+      tokens,
+    };
+  };
 
   /* 
     // 1 - Check email in dbs

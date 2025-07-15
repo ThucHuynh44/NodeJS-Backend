@@ -63,7 +63,30 @@ class KeyTokenService {
   };
 
   static findByRefreshTokenUsed = async (refreshToken) => {
-    return await keytokenModel.findOne({ refreshTokensUsed: refreshToken });
+    return await keytokenModel
+      .findOne({ refreshTokensUsed: refreshToken })
+      .lean();
+  };
+
+  static findByRefreshToken = async (refreshToken) => {
+    return await keytokenModel.findOne({ refreshToken });
+  };
+
+  static deleteKeyById = async (userId) => {
+    return await keytokenModel.deleteOne({ user: userId });
+  };
+
+  static updateRefreshTokenUsed = async (
+    userId,
+    { refreshToken, refreshTokenUsed }
+  ) => {
+    return await keytokenModel.updateOne(
+      { user: userId },
+      {
+        $set: { refreshToken },
+        $addToSet: { refreshTokensUsed: refreshTokenUsed },
+      }
+    );
   };
 }
 
