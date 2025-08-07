@@ -53,9 +53,7 @@ class KeyTokenService {
   };
 
   static findByUserId = async (userId) => {
-    return await keytokenModel
-      .findOne({ user: new Types.ObjectId(userId) })
-      .lean();
+    return await keytokenModel.findOne({ user: new Types.ObjectId(userId) });
   };
 
   static removeKeyById = async (id) => {
@@ -78,13 +76,13 @@ class KeyTokenService {
 
   static updateRefreshTokenUsed = async (
     userId,
-    { refreshToken, refreshTokenUsed }
+    { newRefreshToken, oldRefreshToken }
   ) => {
     return await keytokenModel.updateOne(
       { user: userId },
       {
-        $set: { refreshToken },
-        $addToSet: { refreshTokensUsed: refreshTokenUsed },
+        $set: { refreshToken: newRefreshToken },
+        $addToSet: { refreshTokensUsed: oldRefreshToken },
       }
     );
   };
